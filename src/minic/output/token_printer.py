@@ -9,4 +9,4 @@ def format_token(token: Token) -> str:
     Ejemplo: ``KW_INT 'int' 1 1``. El ``EOF`` se muestra con lexema vacío:
     ``EOF '' 1 42``. Referencia: CLAUDE.md §5.
     """
-    raise NotImplementedError("TODO: proyecto 1 — implementar format_token")
+    return f"{token.type} '{token.lexeme}' {token.line} {token.column}"

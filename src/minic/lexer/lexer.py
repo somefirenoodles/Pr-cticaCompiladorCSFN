@@ -1,12 +1,15 @@
 """Analizador léxico de Mini C.
 
-Se implementa en el **proyecto 1**. Aquí solo quedan el estado y las firmas;
-cada método describe lo que debe hacer según el capítulo IV, §4.4.
+Implementación para el **proyecto 1** según la especificación del analizador
+léxico de Mini-C.
 """
 
+from minic.diagnostics import diagnostic_code
 from minic.diagnostics.diagnostic_bag import DiagnosticBag
+from minic.lexer import lexical_rules
 from minic.lexer.lexer_result import LexerResult
 from minic.lexer.token import Token
+from minic.lexer.token_type import TokenType
 
 
 class Lexer:
@@ -39,19 +42,38 @@ class Lexer:
 
         Referencia: capítulo IV, §4.4 (API y token ``EOF``).
         """
-        raise NotImplementedError("TODO: proyecto 1 — implementar Lexer.scan")
+        while not self._is_at_end():
+            self._start = self._current
+            self._start_line = self._line
+            self._start_column = self._column
+            self._scan_token()
+
+        self._tokens.append(
+            Token(
+                type=TokenType.EOF,
+                lexeme="",
+                literal=None,
+                line=self._line,
+                column=self._column,
+            )
+        )
+        return LexerResult(self._tokens, self._diagnostics.to_list())
 
     def _is_at_end(self) -> bool:
         """Indica si ya se consumió todo el texto fuente."""
-        raise NotImplementedError("TODO: proyecto 1 — implementar Lexer._is_at_end")
+        return self._current >= len(self._source)
 
     def _peek(self) -> str:
         """Devuelve el carácter actual sin consumirlo, o ``""`` al final."""
-        raise NotImplementedError("TODO: proyecto 1 — implementar Lexer._peek")
+        if self._is_at_end():
+            return ""
+        return self._source[self._current]
 
     def _peek_next(self) -> str:
         """Devuelve el carácter siguiente al actual sin consumirlo, o ``""``."""
-        raise NotImplementedError("TODO: proyecto 1 — implementar Lexer._peek_next")
+        if self._current + 1 >= len(self._source):
+            return ""
+        return self._source[self._current + 1]
 
     def _advance(self) -> str:
         """Consume y devuelve el carácter actual, actualizando la posición.
@@ -59,7 +81,14 @@ class Lexer:
         Cada carácter suma una columna; ``\\n`` suma una línea y reinicia la
         columna en 1 (capítulo IV, §4.4, posiciones).
         """
-        raise NotImplementedError("TODO: proyecto 1 — implementar Lexer._advance")
+        char = self._source[self._current]
+        self._current += 1
+        if char == lexical_rules.NEWLINE:
+            self._line += 1
+            self._column = 1
+        else:
+            self._column += 1
+        return char
 
     def _scan_token(self) -> None:
         """Reconoce un token a partir del carácter actual.
@@ -71,7 +100,24 @@ class Lexer:
         4. Operador o símbolo: ``_scan_operator``.
         5. Cualquier otro carácter: ``_report_unrecognized``.
         """
-        raise NotImplementedError("TODO: proyecto 1 — implementar Lexer._scan_token")
+        char = self._peek()
+
+        if char in lexical_rules.WHITESPACE:
+            self._advance()
+            return
+
+        if lexical_rules.is_identifier_start(char):
+            self._scan_identifier()
+            return
+
+        if lexical_rules.is_digit(char):
+            self._scan_number()
+            return
+
+        if self._scan_operator():
+            return
+
+        self._report_unrecognized()
 
     def _scan_identifier(self) -> None:
         """Consume ``[A-Za-z_][A-Za-z0-9_]*`` y emite el token.
@@ -79,14 +125,23 @@ class Lexer:
         Primero se consume el nombre completo y después se consulta
         ``KEYWORDS``: si está, el tipo es la reservada; si no, ``IDENTIFIER``.
         """
-        raise NotImplementedError("TODO: proyecto 1 — implementar Lexer._scan_identifier")
+        while lexical_rules.is_identifier_part(self._peek()):
+            self._advance()
+
+        lexeme = self._source[self._start : self._current]
+        token_type = lexical_rules.KEYWORDS.get(lexeme, TokenType.IDENTIFIER)
+        self._add_token(token_type)
 
     def _scan_number(self) -> None:
         """Consume ``[0-9]+`` y emite ``INTEGER_LITERAL`` con su valor en base 10.
 
         El valor va en ``literal`` como ``int`` sin cota (capítulo IV, §4.4).
         """
-        raise NotImplementedError("TODO: proyecto 1 — implementar Lexer._scan_number")
+        while lexical_rules.is_digit(self._peek()):
+            self._advance()
+
+        lexeme = self._source[self._start : self._current]
+        self._add_token(TokenType.INTEGER_LITERAL, literal=int(lexeme))
 
     def _scan_operator(self) -> bool:
         """Intenta reconocer un operador o símbolo en la posición actual.
@@ -95,14 +150,39 @@ class Lexer:
         reconoce algo, lo consume, emite el token y devuelve ``True``; si no,
         devuelve ``False`` sin consumir nada.
         """
-        raise NotImplementedError("TODO: proyecto 1 — implementar Lexer._scan_operator")
+        if self._current + 1 < len(self._source):
+            two = self._source[self._current : self._current + 2]
+            if two in lexical_rules.DOUBLE:
+                token_type = lexical_rules.DOUBLE[two]
+                self._advance()
+                self._advance()
+                self._add_token(token_type)
+                return True
+
+        one = self._peek()
+        if one in lexical_rules.SINGLE:
+            token_type = lexical_rules.SINGLE[one]
+            self._advance()
+            self._add_token(token_type)
+            return True
+
+        return False
 
     def _add_token(self, token_type: str, literal: int | None = None) -> None:
         """Agrega un ``Token`` con el lexema entre el inicio marcado y la posición actual.
 
         La línea y la columna son las del **inicio** del lexema.
         """
-        raise NotImplementedError("TODO: proyecto 1 — implementar Lexer._add_token")
+        lexeme = self._source[self._start : self._current]
+        self._tokens.append(
+            Token(
+                type=token_type,
+                lexeme=lexeme,
+                literal=literal,
+                line=self._start_line,
+                column=self._start_column,
+            )
+        )
 
     def _report_unrecognized(self) -> None:
         """Registra ``LEX001`` para el carácter actual, lo consume y continúa.
@@ -110,4 +190,10 @@ class Lexer:
         Mensaje: ``Carácter no reconocido: '<c>'`` en la línea y la columna del
         carácter (``diagnostic_code.unrecognized_character``).
         """
-        raise NotImplementedError("TODO: proyecto 1 — implementar Lexer._report_unrecognized")
+        char = self._advance()
+        self._diagnostics.report(
+            code=diagnostic_code.LEX001,
+            message=diagnostic_code.unrecognized_character(char),
+            line=self._start_line,
+            column=self._start_column,
+        )

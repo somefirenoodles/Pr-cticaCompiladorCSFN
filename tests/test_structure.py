@@ -215,11 +215,12 @@ def test_diagnostic_bag_keeps_order() -> None:
 # --- Etapas pendientes -------------------------------------------------------
 
 
-def test_lexer_is_stub() -> None:
+def test_lexer_is_implemented() -> None:
     from minic.lexer import Lexer
 
-    with pytest.raises(NotImplementedError):
-        Lexer("").scan()
+    result = Lexer("").scan()
+    assert len(result.tokens) == 1
+    assert result.tokens[0].type == "EOF"
 
 
 def test_parser_is_stub() -> None:
@@ -259,13 +260,12 @@ def test_cli_with_missing_file_returns_2(tmp_path: Path) -> None:
     assert main([str(tmp_path / "no_existe.mc")]) == 2
 
 
-def test_cli_with_valid_file_returns_3_while_lexer_missing(capsys: pytest.CaptureFixture[str]) -> None:
+def test_cli_with_valid_file_returns_0_when_lexer_implemented(capsys: pytest.CaptureFixture[str]) -> None:
     from minic.main import main
 
-    assert main([str(VALID_EXAMPLE)]) == 3
+    assert main([str(VALID_EXAMPLE)]) == 0
     captured = capsys.readouterr()
-    assert captured.out == ""
-    assert "Etapa léxica no implementada todavía" in captured.err
+    assert "Tokens preparados para el analizador sintáctico." in captured.out
 
 
 def test_python_dash_m_entry_point() -> None:
@@ -276,4 +276,5 @@ def test_python_dash_m_entry_point() -> None:
         text=True,
         env=env,
     )
-    assert completed.returncode == 3
+    assert completed.returncode == 0
+

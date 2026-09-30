@@ -44,6 +44,12 @@ WHITESPACE: frozenset[str] = frozenset({" ", "\t", "\r", "\n"})
 
 NEWLINE = "\n"
 
+ALPHABET: frozenset[str] = frozenset(
+    "\t\n\r !()+,-0123456789;=ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz{}"
+)
+"""Alfabeto Σ según la especificación del analizador léxico de Mini C."""
+
+
 
 def is_identifier_start(character: str) -> bool:
     """Indica si ``character`` puede iniciar un identificador: ``[A-Za-z_]`` (ASCII)."""

@@ -9,4 +9,4 @@ def format_diagnostic(diagnostic: Diagnostic) -> str:
     Ejemplo: ``LEX001 error 1:3 Carácter no reconocido: '!'``.
     Referencia: CLAUDE.md §5.
     """
-    raise NotImplementedError("TODO: proyecto 1 — implementar format_diagnostic")
+    return f"{diagnostic.code} {diagnostic.severity} {diagnostic.line}:{diagnostic.column} {diagnostic.message}"
